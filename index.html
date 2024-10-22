@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    .hidden {
+      display: none;
+    }
+    #loginForm, #registerForm {
+      margin-bottom: 20px;
+    }
+    #blackoutOverlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.9); /* Black overlay */
+      color: white;
+      display: none; /* Hidden by default */
+      justify-content: center;
+      align-items: center;
+      font-size: 30px;
+      z-index: 9999; /* Ensure it is on top */
+    }
+    #messagesList {
+      list-style-type: none;
+      margin-top: 20px;
+    }
+    #messagesList li {
+      background: #f1f1f1;
+      padding: 10px;
+      margin-bottom: 5px;
+      border-radius: 5px;
+    }
+  </style>
+  <script>
+    // Firebase configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyDvFDByPPo9zgwKLdPaREz1OVMQCXmPfrs",
+      authDomain: "bets-d795d.firebaseapp.com",
+      databaseURL: "https://bets-d795d-default-rtdb.firebaseio.com",
+      projectId: "bets-d795d",
+      storageBucket: "bets-d795d.appspot.com",
+      appId: "1:384386108287:android:d238a5ec8068d9bb9be84a"
+    };
+    firebase.initializeApp(firebaseConfig);
+
+    // Register a new user
+    function registerUser() {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const phone = document.getElementById('phone').value;
+
+      firebase.auth().createUserWithEmailAndPassword(email, password)
+        .then((userCredential) => {
+          const user = userCredential.user;
+          const uid = user.uid;
+
+          // Save user data to Firebase Realtime Database
+          firebase.database().ref('users/' + uid).set({
+            email: email,
+            phone: phone,
+            uid: uid,
+            blackout: false
+          });
+
+          // Display success and login the user automatically
+          document.getElementById('registerForm').classList.add('hidden');
+          document.getElementById('uidDisplay').textContent = "Your UID is: " + uid;
+          fetchMessages();  // Start fetching messages
+          checkBlackoutStatus(uid);  // Start checking blackout status
+        })
+        .catch((error) => {
+          alert(error.message);
+        });
+    }
+
+    // Login existing user
+    function loginUser() {
+      const email = document.getElementById('loginEmail').value;
+      const password = document.getElementById('loginPassword').value;
+
+      firebase.auth().signInWithEmailAndPassword(email, password)
+        .then((userCredential) => {
+          const user = userCredential.user;
+          document.getElementById('loginForm').classList.add('hidden');
+          fetchMessages();
+          checkBlackoutStatus(user.uid);
+        })
+        .catch((error) => {
+          alert(error.message);
+        });
+    }
+
+    // Fetch messages for the logged-in user
+    function fetchMessages() {
+      const user = firebase.auth().currentUser;
+      if (user) {
+        const uid = user.uid;
+        firebase.database().ref('users/' + uid + '/messages').on('value', (snapshot) => {
+          const messages = snapshot.val();
+          const messagesList = document.getElementById('messagesList');
+          messagesList.innerHTML = ''; // Clear the list first
+
+          if (messages) {
+            for (let messageId in messages) {
+              const messageData = messages[messageId];
+              messagesList.innerHTML += `<li>${messageData.message}</li>`;
+            }
+          } else {
+            messagesList.innerHTML = '<li>No messages received.</li>';
+          }
+        });
+      } else {
+        alert("User not authenticated.");
+      }
+    }
+
+    // Check blackout status and show overlay if active
+    function checkBlackoutStatus(uid) {
+      firebase.database().ref('users/' + uid).on('value', (snapshot) => {
+        const user = snapshot.val();
+        const blackoutOverlay = document.getElementById('blackoutOverlay');
+
+        if (user.blackout) {
+          blackoutOverlay.style.display = 'flex'; // Show the blackout overlay
+        } else {
+          blackoutOverlay.style.display = 'none'; // Hide the blackout overlay
+        }
+      });
+    }
+
+    // Fetch messages and check user status on load
+    firebase.auth().onAuthStateChanged((user) => {
+      if (user) {
+        fetchMessages();
+        checkBlackoutStatus(user.uid);
+      }
+    });
+  </script>
+</head>
+<body>
+  <h2>User App - Login/Registration</h2>
+
+  <!-- Registration Form for new users -->
+  <div id="registerForm">
+    <h3>Register</h3>
+    <input type="email" id="email" placeholder="Email" required><br><br>
+    <input type="password" id="password" placeholder="Password" required><br><br>
+    <input type="text" id="phone" placeholder="Phone Number" required><br><br>
+    <button onclick="registerUser()">Register</button>
+  </div>
+
+  <!-- Login Form for existing users -->
+  <div id="loginForm">
+    <h3>Login</h3>
+    <input type="email" id="loginEmail" placeholder="Email" required><br><br>
+    <input type="password" id="loginPassword" placeholder="Password" required><br><br>
+    <button onclick="loginUser()">Login</button>
+  </div>
+
+  <p id="uidDisplay" style="color: green;"></p>
+
+  <h3>Messages</h3>
+  <ul id="messagesList"></ul>
+
+  <div id="blackoutOverlay">Blackout Active</div>
+</body>
+</html><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Page title</title>
+</head>
+<body>
+    
+</body>
+</html>
